@@ -1,8 +1,7 @@
 const sequelize = require('../config/database');
 const Sequelize = require('sequelize');
-const ProjectModel = require('../models/project-model');
+const Projects = require('../models/projects-model');
 const logger = require('../config/logger').logger;
-const routes = require('../config/routes');
 
 exports.findPagination = (req, res) => {
     const limit = 10;
@@ -11,44 +10,57 @@ exports.findPagination = (req, res) => {
         return res.boom.badRequest('Page is not valid').send;
     }
 
-    ProjectModel.findAndCountAll({
+    Projects.findAndCountAll({
         attributes: [
             'id',
             'name',
-            'order',
-            'isClose',
+            'position',
+            'isClosed',
             'createdAt',
             'updatedAt'
         ],
-        order: [['order', 'ASC']],
+        order: [['position', 'ASC']],
         limit: limit,
         offset: offset
     })
-        .then(projects => {
+        .then(project => {
             return res.json({
-                data: projects.rows,
+                data: project.rows,
                 meta: {
-                    current:
-                        offset === 0
-                            ? routes.projects + '?page=1'
-                            : routes.projects + '?page=' + req.query.page,
+                    totalRow: project.count,
+                    current: offset === 0 ? 'page=1' : 'page=' + req.query.page,
                     prev:
                         offset === 0
                             ? ''
-                            : routes.projects +
-                              '?page=' +
-                              (parseInt(req.query.page) - 1),
+                            : 'page=' + (parseInt(req.query.page) - 1),
                     next:
-                        offset + limit > projects.count
+                        offset + limit > project.count
                             ? ''
-                            : routes.projects +
-                              '?page=' +
+                            : 'page=' +
                               (offset === 0 ? 2 : parseInt(req.query.page) + 1)
                 }
             });
         })
         .catch(Sequelize.EmptyResultError, err => {
             return res.json([]);
+        })
+        .catch(err => {
+            logger.error(err);
+            return res.boom.internal();
+        });
+};
+
+exports.findById = (req, res) => {
+    if (!/^\d+$/.test(req.params.id)) {
+        return res.boom.badRequest('Id must valid');
+    }
+
+    Projects.findByPk(req.params.id)
+        .then(project => {
+            return res.json(project);
+        })
+        .catch(Sequelize.EmptyResultError, err => {
+            return res.boom.notFound('Resource Not Found');
         })
         .catch(err => {
             logger.error(err);
@@ -66,16 +78,23 @@ exports.save = (req, res) => {
         });
     }
 
+    if (!req.body.position) {
+        fields.push({
+            column: 'position',
+            message: 'Position cannot be empty'
+        });
+    }
+
     if (fields.length > 0) {
         return res.boom.badRequest('Bad Request', { attribute: fields });
     }
 
-    ProjectModel.count().then(count => {
+    Projects.count().then(count => {
         sequelize.transaction(t => {
-            return ProjectModel.create(
+            return Projects.create(
                 {
                     name: req.body.name,
-                    order: count + 1
+                    position: count + 1
                 },
                 { transaction: t }
             )
@@ -95,18 +114,23 @@ exports.update = (req, res) => {
         return res.boom.badRequest('Id must valid');
     }
 
-    ProjectModel.findOne({
+    Projects.findOne({
         where: { id: req.params.id },
         rejectOnEmpty: true
     })
         .then(project => {
             sequelize.transaction(t => {
-                return ProjectModel.update(
-                    { name: req.body.name, isClose: req.body.isClose },
-                    { where: { id: req.params.id }, transaction: t }
+                return Projects.update(
+                    { name: req.body.name, isClosed: req.body.isClosed },
+                    {
+                        where: { id: req.params.id },
+                        plain: true,
+                        returning: true,
+                        transaction: t
+                    }
                 )
-                    .then(() => {
-                        return res.status(204).send();
+                    .then(p => {
+                        return res.json(p[1]);
                     })
                     .catch(err => {
                         logger.error(err);
@@ -128,18 +152,18 @@ exports.delete = (req, res) => {
         return res.boom.badRequest('Id must valid');
     }
 
-    ProjectModel.findOne({
+    Projects.findOne({
         where: { id: req.params.id },
         rejectOnEmpty: true
     })
         .then(project => {
             sequelize.transaction(t => {
-                return ProjectModel.destroy({
+                return Projects.destroy({
                     where: { id: req.params.id },
                     transaction: t
                 })
                     .then(() => {
-                        return res.status(204).send();
+                        return res.json(project);
                     })
                     .catch(err => {
                         logger.error(err);

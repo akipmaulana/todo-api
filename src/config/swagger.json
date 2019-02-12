@@ -49,6 +49,9 @@
                 },
                 "meta": {
                   "properties": {
+                    "totalRow": {
+                      "type": "string"
+                    },
                     "current": {
                       "type": "string"
                     },
@@ -125,6 +128,51 @@
       }
     },
     "/api/v1/projects/{id}": {
+      "get": {
+        "summary": "Get one project",
+        "tags": ["Project"],
+        "description": "Get one project",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Id Project",
+            "required": true,
+            "schema": {
+              "properties": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "produces": ["application/json"],
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "schema": {
+              "$ref": "#/definitions/Project"
+            }
+          },
+          "400": {
+            "description": "Bad Request."
+          },
+          "401": {
+            "description": "Unauthorize."
+          },
+          "403": {
+            "description": "Forbidden Access."
+          },
+          "404": {
+            "description": "Not found."
+          },
+          "405": {
+            "description": "Method not allowed."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      },
       "post": {
         "summary": "Update one project",
         "tags": ["Project"],
@@ -159,8 +207,11 @@
         ],
         "produces": ["application/json"],
         "responses": {
-          "204": {
-            "description": "No Content"
+          "200": {
+            "description": "Ok",
+            "schema": {
+                "$ref": "#/definitions/Project"
+            }
           },
           "400": {
             "description": "Bad Request."
@@ -201,8 +252,11 @@
         ],
         "produces": ["application/json"],
         "responses": {
-          "204": {
-            "description": "No Content"
+          "200": {
+            "description": "No Content",
+            "schema": {
+                "$ref": "#/definitions/Project"
+            }
           },
           "400": {
             "description": "Bad Request."
@@ -239,7 +293,7 @@
         "order": {
           "type": "integer"
         },
-        "isClose": {
+        "isClosed": {
           "type": "boolean"
         },
         "createdAt": {
