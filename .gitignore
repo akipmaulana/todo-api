@@ -4,3 +4,4 @@ coverage
 log
 .DS_Store
 dump.rdb
+src/config/env/development\.json
